@@ -216,28 +216,28 @@ handle_info({{carta, TJugada}, Jugador}, esperarJugada, {Temp, {Baraja, CBanca, 
 	gen_fsm:cancel_timer(Temp),
 	{_Pid, NombreJ, _Fichas, _ApuestaJ, _Mano, _Estado} = buscarJugador(ListaJ, Jugador),
 	{{Valor, Nombre, Palo, EstadoC}, RestoB} = obtenerCarta(Baraja),
+
 	if
 		(TJugada == "cubierta") ->
-   			ListaJN = entregarCarta(ListaJ, Jugador, {Valor, Nombre, Palo, EstadoC});
-		(TJugada == "descubierta") ->
-			ListaJN = entregarCarta(ListaJ, Jugador, {Valor, Nombre, Palo, descubierta})
-	end,
-	if
-		(TJugada == "cubierta") ->
-			{_Pid, _NombreJ, _Fichas, _ApuestaJ, ManoN, _Estado} = buscarJugador(ListaJN, Jugador),
+			{_Pid, _NombreJ, _Fichas, _ApuestaJ, ManoN, _Estado} = buscarJugador(ListaJ, Jugador),
 			{ValorR, NombreR, PaloR, EstadoC} = lists:keyfind(cubierta, 4, ManoN),
 			lists:keyreplace(cubierta, 4, ManoN, {ValorR, NombreR, PaloR, descubierta}),
+			{_Pid, _NombreJ, _Fichas, _ApuestaJ, ManoN, _Estado} = buscarJugador(ListaJ, Jugador),
+			ListaJN = entregarCarta(ListaJ, Jugador, {Valor, Nombre, Palo, EstadoC}),
 			io:format("S: El jugador ~s pide carta cubierta. Revela ~w de ~w~n", [NombreJ, [ValorR],[PaloR]]),
 			PJugador = sumarCartas(ManoN),
 			broadCast(ListaJN, {"~s ha pedido carta cubierta. Carta Revelada: ~w de ~w   Puntuacion: ~w~n", [[NombreJ], [ValorR], [PaloR], [PJugador]]}),
-			Jugador ! {mensaje, {"Recibes ~w de ~w.~n", [[Valor],[Palo]]}};
+			Jugador ! {mensaje, {"PRIVADO: Recibes ~w de ~w.~n", [[Valor],[Palo]]}};
 
 		(TJugada == "descubierta") ->
+			ListaJN = entregarCarta(ListaJ, Jugador, {Valor, Nombre, Palo, descubierta}),
 			io:format("S: El jugador ~s pide carta descubierta. Recibe ~w de ~w~n", [NombreJ, [Valor],[Palo]]),
 			{_Pid, _NombreJ, _Fichas, _ApuestaJ, ManoN, _Estado} = buscarJugador(ListaJN, Jugador),
 			PJugador = sumarCartas(ManoN),
 			broadCast(ListaJN, {"~s ha pedido carta descubierta. Carta nueva: ~w de ~w   Puntuacion: ~w~n", [[NombreJ], [Valor], [Palo], [PJugador]]})
 	end,
+
+
 	if
 		(PJugador == -1) ->
 			broadCast(ListaJ, {"~s se ha pasado.~n", [NombreJ]}),
@@ -358,6 +358,8 @@ repartirCartasJAux({[{Jugador, NombreJ, Fichas, Apuesta, _Mano, Estado}|T], Bara
 	{{Valor, Nombre, Palo, EstadoC}, RestoB} = obtenerCarta(Baraja),
 	broadCast(ListaJ, {"~s recibe una carta cubierta~n",  [NombreJ]}),
 	repartirCartasJAux({T, RestoB}, ListaJAux++[{Jugador, NombreJ, Fichas, Apuesta, [{Valor, Nombre, Palo, EstadoC}], Estado}], ListaJ).
+%_________________________________________________________________________________
+
 %_________________________________________________________________________________
 
 broadCast([], {Cadena, Variables}) ->

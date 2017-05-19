@@ -128,8 +128,5 @@ handle_info({mensaje, {Cadena, Variables}}, espera, {Sala, Fichas}) ->
 
 handle_info({jugar}, espera, {Sala, Fichas}) ->
 	io:format("Es tu turno para jugar. Tienes 1 minuto para indicar tu jugada.~n"),
-   	{next_state,jugada,{Sala, Fichas}};
+   	{next_state,jugada,{Sala, Fichas}}.
 %_______________________________________________________________________________
-
-handle_info({cubierta, {Valor, _Nombre, Palo}}, espera, {_Sala,_Fichas}) ->
-  io:format("La carta recibida es el ~w de ~w~n", [Valor],[Palo]).
