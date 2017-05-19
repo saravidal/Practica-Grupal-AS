@@ -126,7 +126,7 @@ handle_info ({apuesta}, pedirApuesta, {Temp, Juego, {ListaJ, []}}) ->
 	self() ! {repartir},
 	{next_state, repartirCartas, {Temp, Juego, {ListaJ, ListaJ}}};
 
-handle_info ({apuesta}, pedirApuesta, {_Temp, Juego, { ListaJ, 
+handle_info ({apuesta}, pedirApuesta, {_Temp, Juego, { ListaJ,
 		[{Jugador, NombreJ, Fichas, _Apuesta, _Mano, _Estado}|RestoJ]}}) ->
 	io:format("S: Pedimos apuesta a ~s~n", [NombreJ]),
 	TempAux = gen_fsm:start_timer(60000,  Jugador),
@@ -225,7 +225,8 @@ handle_info({{carta, TJugada}, Jugador}, esperarJugada, {Temp, {Baraja, CBanca, 
 	if
 		(TJugada == "cubierta") ->
 			{_Pid, _NombreJ, _Fichas, _ApuestaJ, ManoN, _Estado} = buscarJugador(ListaJN, Jugador),
-			{ValorR, _NombreR, PaloR, _EstadoCR} = revelarCarta(ManoN),
+			{ValorR, NombreR, PaloR, EstadoC} = lists:keyfind(cubierta, 4, ManoN),
+			lists:keyreplace(cubierta, 4, ManoN, {ValorR, NombreR, PaloR, descubierta}),
 			io:format("S: El jugador ~s pide carta cubierta. Revela ~w de ~w~n", [NombreJ, [ValorR],[PaloR]]),
 			PJugador = sumarCartas(ManoN),
 			broadCast(ListaJN, {"~s ha pedido carta cubierta. Carta Revelada: ~w de ~w   Puntuacion: ~w~n", [[NombreJ], [ValorR], [PaloR], [PJugador]]}),
@@ -294,11 +295,8 @@ crearListaJugadores(Jugadores) ->
 	auxiliarLista(Jugadores, [], 1).
 %_________________________________________________________________________________
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% AÑADIR FUNCIoN QUE BARAJE LAS CARTAS PARA NO USAR LAS FUNCIONES DE random %%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 nueva_baraja()->
-	[{10, espadas1, espadas, cubierta},{10, bastos1, bastos, cubierta},
+	Baraja = [{10, espadas1, espadas, cubierta},{10, bastos1, bastos, cubierta},
 	 {10, oros1, oros, cubierta},{10, copas1, copas, cubierta},
 	 {20, espadas2, espadas, cubierta},{20, bastos2, bastos, cubierta},
 	 {20, oros2, oros, cubierta},{20, copas2, copas, cubierta},
@@ -317,7 +315,17 @@ nueva_baraja()->
 	 {5, espadas9, espadas, cubierta}, {5, bastos9, bastos, cubierta},
 	 {5, oros9, oros, cubierta}, {5, copas9, copas, cubierta},
 	 {5,espadas10,espadas, cubierta},  {5,bastos10,bastos, cubierta},
-	 {5,oros10,oros, cubierta},  {5,copas10,copas, cubierta}].
+	 {5,oros10,oros, cubierta},  {5,copas10,copas, cubierta}],
+	 barajar(Baraja).
+
+barajar(Baraja) -> barajar(Baraja, []).
+
+barajar([], BarajaR) -> BarajaR;
+
+barajar(Baraja, BarajaR) ->
+	random:seed(now()),
+  {Carta, [H | T]} = lists:split(random:uniform(length(Baraja)) - 1, Baraja),
+  barajar(Carta ++ T, [H | BarajaR]).
 %_________________________________________________________________________________
 
 borrarJugador(_,[]) ->
@@ -359,44 +367,17 @@ broadCast([{Jugador, _NombreJ, _Fichas, _Apuesta, _Mano, _Estado}|T], {Cadena, V
 	broadCast(T, {Cadena, Variables}).
 %_________________________________________________________________________________
 
-randomSeed() ->
-	case random:seed(now()) of
-		undefined ->
-			randomSeed();
-		Else ->
-			Else
-	end.
-
-random(Num) ->
-	{_H,_M,S} = randomSeed(),
-	(S rem Num) + 1 .
-%_________________________________________________________________________________
-
 obtenerCarta(Baraja) ->
-	Posicion = random(length(Baraja)),
-	{Valor, Nombre, Palo, EstadoC} = lists:nth(Posicion, Baraja),
+	{Valor, Nombre, Palo, EstadoC} = lists:nth(1, Baraja),
 	RestoB = lists:keydelete(Nombre,2,Baraja),
 	{{Valor, Nombre, Palo, EstadoC}, RestoB}.
-%_________________________________________________________________________________
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% CONSEGUIR QUE ENCUENTRE LA PRIMERA CARTA CUBIERTA DE LA MANO, CAMBIAR SU ESTADO %%%
-%%% Y DEVOLVERLA								    %%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-revelarCarta(Mano) ->
-	lists:nth(length(Mano)-1,Mano).
-	%case lists:keyfind(cubierta, 2, Mano) of
-		%	{Valor, Nombre, Palo, cubierta} ->
-			%maps:update(cubierta, descubierta, Mano),
-			%{Valor, Nombre, Palo, descubierta}
-	%end.
 %_________________________________________________________________________________
 
 entregarCarta([], _, _) ->
 	[];
 
 entregarCarta([{Jugador, NombreJ, Fichas, Apuesta, Mano, Estado}|ListaJO], Jugador, {Valor, Nombre, Palo, EstadoC}) ->
-	ListaJO++[{Jugador, NombreJ, Fichas, Apuesta, [{Valor, Nombre, Palo, EstadoC}|Mano], Estado}];
+	ListaJO++[{Jugador, NombreJ, Fichas, Apuesta, [{Valor, Nombre, Palo, EstadoC} | Mano], Estado}];
 
 entregarCarta([{JugadorAux, NombreJ, Fichas, Apuesta, Mano, Estado}|ListaJO], Jugador, {Valor, Nombre, Palo, EstadoC}) ->
 	entregarCarta(ListaJO, Jugador, {Valor, Nombre, Palo, EstadoC})++[{JugadorAux, NombreJ, Fichas, Apuesta, Mano, Estado}].
@@ -477,13 +458,13 @@ sumarFichas(_PBanca, [], ListaJ) ->
 jugadoresJuego(ListaJ) ->
 	jugadoresJuegoAux(ListaJ, []).
 
-jugadoresJuegoAux([], ListaJJ) -> 
+jugadoresJuegoAux([], ListaJJ) ->
 	ListaJJ;
 
 jugadoresJuegoAux([{Jugador, NombreJ, Fichas, Apuesta, Cartas, Estado}|Cola], ListaJJ) ->
 	if
 		(Estado == 0) ->
 			jugadoresJuegoAux (Cola, ListaJJ++[{Jugador, NombreJ, Fichas, Apuesta, Cartas, Estado}]);
-		(true) -> 
+		(true) ->
 			jugadoresJuegoAux(Cola, ListaJJ)
 	end.
