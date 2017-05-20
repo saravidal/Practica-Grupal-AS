@@ -289,7 +289,7 @@ auxiliarLista([], ListaJ, _Contador) ->
 
 auxiliarLista([PrimerJugador|Jugadores], ListaJ, Contador) ->
 	NombreJ = string:concat("Jugador", integer_to_list(Contador)),
-	auxiliarLista(Jugadores,  ListaJ++[{PrimerJugador, NombreJ , 50, 0, [], 0}] , Contador+1).
+	auxiliarLista(Jugadores,  ListaJ++[{PrimerJugador, NombreJ , 100, 0, [], 0}] , Contador+1).
 
 crearListaJugadores(Jugadores) ->
 	auxiliarLista(Jugadores, [], 1).
