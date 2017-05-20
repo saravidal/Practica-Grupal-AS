@@ -296,7 +296,7 @@ crearListaJugadores(Jugadores) ->
 %_________________________________________________________________________________
 
 nueva_baraja()->
-	Baraja = [{10, espadas1, espadas, cubierta},{10, bastos1, bastos, cubierta},
+	 [{10, espadas1, espadas, cubierta},{10, bastos1, bastos, cubierta},
 	 {10, oros1, oros, cubierta},{10, copas1, copas, cubierta},
 	 {20, espadas2, espadas, cubierta},{20, bastos2, bastos, cubierta},
 	 {20, oros2, oros, cubierta},{20, copas2, copas, cubierta},
@@ -315,17 +315,19 @@ nueva_baraja()->
 	 {5, espadas9, espadas, cubierta}, {5, bastos9, bastos, cubierta},
 	 {5, oros9, oros, cubierta}, {5, copas9, copas, cubierta},
 	 {5,espadas10,espadas, cubierta},  {5,bastos10,bastos, cubierta},
-	 {5,oros10,oros, cubierta},  {5,copas10,copas, cubierta}],
-	 barajar(Baraja).
+	 {5,oros10,oros, cubierta},  {5,copas10,copas, cubierta}].
 
-barajar(Baraja) -> barajar(Baraja, []).
+randomSeed() ->
+	case random:seed(now()) of
+		undefined ->
+			randomSeed();
+		Else ->
+			Else
+	end.
 
-barajar([], BarajaR) -> BarajaR;
-
-barajar(Baraja, BarajaR) ->
-	random:seed(now()),
-  {Carta, [H | T]} = lists:split(random:uniform(length(Baraja)) - 1, Baraja),
-  barajar(Carta ++ T, [H | BarajaR]).
+random(Num) ->
+	{_H,_M,S} = randomSeed(),
+	(S rem Num) + 1 .
 %_________________________________________________________________________________
 
 borrarJugador(_,[]) ->
@@ -357,6 +359,7 @@ repartirCartasJAux({[], Baraja}, ListaJAux, _ListaJ) ->
 repartirCartasJAux({[{Jugador, NombreJ, Fichas, Apuesta, _Mano, Estado}|T], Baraja}, ListaJAux, ListaJ) ->
 	{{Valor, Nombre, Palo, EstadoC}, RestoB} = obtenerCarta(Baraja),
 	broadCast(ListaJ, {"~s recibe una carta cubierta~n",  [NombreJ]}),
+	Jugador ! {mensaje, {"PRIVADO: Recibes ~w de ~w.~n", [[Valor],[Palo]]}},
 	repartirCartasJAux({T, RestoB}, ListaJAux++[{Jugador, NombreJ, Fichas, Apuesta, [{Valor, Nombre, Palo, EstadoC}], Estado}], ListaJ).
 %_________________________________________________________________________________
 
@@ -370,7 +373,7 @@ broadCast([{Jugador, _NombreJ, _Fichas, _Apuesta, _Mano, _Estado}|T], {Cadena, V
 %_________________________________________________________________________________
 
 obtenerCarta(Baraja) ->
-	{Valor, Nombre, Palo, EstadoC} = lists:nth(1, Baraja),
+	{Valor, Nombre, Palo, EstadoC} = lists:nth(random(length(Baraja)), Baraja),
 	RestoB = lists:keydelete(Nombre,2,Baraja),
 	{{Valor, Nombre, Palo, EstadoC}, RestoB}.
 %_________________________________________________________________________________
@@ -406,6 +409,7 @@ buscarJugador([{_JugadorAux, _NombreJ, _Fichas, _Apuesta, _Mano, _Estado}|ListaJ
 %_________________________________________________________________________________
 
 cartasBanca(CBanca, Baraja) ->
+	io:format("S: A la baraja le quedan ~w cartas ~n",[length(Baraja)]),
 	{{Valor, Nombre, Palo, _EstadoC}, MazoN} = obtenerCarta(Baraja),
 	TotalCartas = CBanca++[{Valor, Nombre, Palo, descubierta}],
 	Puntuacion = sumarCartas(TotalCartas),
