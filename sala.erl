@@ -225,7 +225,7 @@ handle_info({{carta, TJugada}, Jugador}, esperarJugada, {Temp, {Baraja, CBanca, 
 			{_Pid, _NombreJ, _Fichas, _ApuestaJ, ManoN, _Estado} = buscarJugador(ListaJ, Jugador),
 			ListaJN = entregarCarta(ListaJ, Jugador, {Valor, Nombre, Palo, EstadoC}),
 			io:format("S: El jugador ~s pide carta cubierta. Revela ~w de ~w~n", [NombreJ, [ValorR],[PaloR]]),
-			PJugador = sumarCartas(ManoN),
+			PJugador = sumarCartas(ManoN) + Valor,
 			broadCast(ListaJN, {"~s ha pedido carta cubierta. Carta Revelada: ~w de ~w   Puntuacion: ~w~n", [[NombreJ], [ValorR], [PaloR], [PJugador]]}),
 			Jugador ! {mensaje, {"PRIVADO: Recibes ~w de ~w.~n", [[Valor],[Palo]]}};
 
@@ -239,7 +239,7 @@ handle_info({{carta, TJugada}, Jugador}, esperarJugada, {Temp, {Baraja, CBanca, 
 
 
 	if
-		(PJugador == -1) ->
+		(PJugador > 75) ->
 			broadCast(ListaJ, {"~s se ha pasado.~n", [NombreJ]}),
 			ListaJNAux = cambiarEstado(ListaJN, Jugador, 2),
 			self() ! {jugada},
@@ -410,27 +410,21 @@ buscarJugador([{_JugadorAux, _NombreJ, _Fichas, _Apuesta, _Mano, _Estado}|ListaJ
 
 cartasBanca(CBanca, Baraja) ->
 	io:format("S: A la baraja le quedan ~w cartas ~n",[length(Baraja)]),
-	{{Valor, Nombre, Palo, _EstadoC}, MazoN} = obtenerCarta(Baraja),
-	TotalCartas = CBanca++[{Valor, Nombre, Palo, descubierta}],
+	{{Valor, Nombre, Palo, EstadoC}, RestoB} = obtenerCarta(Baraja),
+	TotalCartas = CBanca++[{Valor, Nombre, Palo, EstadoC}],
 	Puntuacion = sumarCartas(TotalCartas),
 	if
 		Puntuacion < 60  ->
-			cartasBanca(TotalCartas, MazoN);
+			cartasBanca(TotalCartas, RestoB);
 		true ->
-			{TotalCartas, MazoN}
+			{TotalCartas, RestoB}
 	end.
 %_________________________________________________________________________________
 
 sumarCartas([]) -> 0;
 
 sumarCartas([{Valor, _Nombre, _Palo, _EstadoC}|ListaCartas]) ->
-	Puntuacion = Valor + sumarCartas(ListaCartas),
-	if
-		Puntuacion > 75 ->
-			-1;
-		true ->
-			Puntuacion
-	end.
+		Valor + sumarCartas(ListaCartas).
 %_________________________________________________________________________________
 
 sumarFichas(_PBanca, [] ) ->
@@ -443,7 +437,7 @@ sumarFichas(PBanca, [{Jugador,NombreJ,Fichas,Apuesta,Mano,Estado}|ListaJO], List
 	PuntuacionJ = sumarCartas(Mano),
 	io:format("PuntuacionBanca: ~w PuntuacionJugador: ~w~n", [[PBanca],[PuntuacionJ]]),
 	if
-		(PuntuacionJ < 0) ->
+		(PuntuacionJ > 75) ->
 			Jugador ! {mensaje, {"Has perdido con ~w, te has pasado de 75.~n", [PuntuacionJ]}},
 			sumarFichas(PBanca, ListaJO, [{Jugador,NombreJ, Fichas, 0,[], Estado}]++ListaJ);
 		(PBanca < PuntuacionJ) ->
