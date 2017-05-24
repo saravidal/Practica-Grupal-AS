@@ -29,13 +29,13 @@
 %Generacion de la maquina de estados de la sala
 on(Clientes) ->
 	ListaJ = crearListaJugadores(Clientes),
-	io:format("S: Sala iniciada.~n"),
+	io:format("[Sala] Sala iniciada.~n"),
 	gen_fsm:start_link({local, ?SALA}, ?MODULE, ListaJ, []).
 %_________________________________________________________________________________
 
 %Inicializacion de la sala
 init(ListaJ) ->
-	io:format("S: Empezamos la partida~n"),
+	io:format("[Sala] Empezamos la partida~n"),
 	StateData = { 0, {nueva_baraja(), [], 0}, {ListaJ, ListaJ}},
 	self() ! {apuesta},
 	{ok, pedirApuesta, StateData}.
@@ -55,13 +55,13 @@ handle_event(stop, _Estado, _DatosEstado) ->
 
 esperarApuesta ({timeout, _From, JAux}, {Temp, Juego, {ListaJ, []}}) ->
 	{_Pid, NombreJ, _Fichas, _ApuestaJ, _Mano, _Estado} = buscarJugador(ListaJ, JAux),
-	io:format("S: Eliminamos a ~s~n", [NombreJ]),
+	io:format("[Sala] Eliminamos a ~s~n", [NombreJ]),
 	ListaJMod = borrarJugador(JAux, ListaJ),
-	io:format("S: Proximo estado REPARTIR CARTAS~n"),
+	io:format("[Sala] Proximo estado REPARTIR CARTAS~n"),
 	exit(JAux, kill),
 	if
 		(length(ListaJMod) == 0) ->
-		   	io:format("S: Sala cerrada~n"),
+		   	io:format("[Sala] Sala cerrada~n"),
    			{stop, normal, []};
 		(true) ->
 			self() ! {repartir},
@@ -70,12 +70,12 @@ esperarApuesta ({timeout, _From, JAux}, {Temp, Juego, {ListaJ, []}}) ->
 
 esperarApuesta ({timeout, _From, JAux}, {Temp, Juego, {ListaJ, ListaJAux}}) ->
 	{_Pid, NombreJ, _Fichas, _ApuestaJ, _Mano, _Estado} = buscarJugador(ListaJ, JAux),
-	io:format("S: Eliminamos a ~s~n", [NombreJ]),
+	io:format("[Sala] Eliminamos a ~s~n", [NombreJ]),
 	ListaJMod = borrarJugador(JAux, ListaJ),
 	exit(JAux, kill),
 	if
 		(length(ListaJMod) == 0) ->
-			io:format("S: Sala cerrada~n"),
+			io:format("[Sala] Sala cerrada~n"),
    			{stop, normal, []};
 		(true) ->
 			self() ! {apuesta},
@@ -85,19 +85,19 @@ esperarApuesta ({timeout, _From, JAux}, {Temp, Juego, {ListaJ, ListaJAux}}) ->
 
 esperarJugada ({timeout, _From, JAux}, {Temp, Juego, {ListaJ, []}}) ->
 	{_Pid, NombreJ, _Fichas, _ApuestaJ, _Mano, _Estado} = buscarJugador(ListaJ, JAux),
-	io:format("S: Eliminamos a ~s~n", [NombreJ]),
+	io:format("[Sala] Eliminamos a ~s~n", [NombreJ]),
 	ListaJMod = borrarJugador(JAux, ListaJ),
 	exit(JAux, kill),
 	ListaJP = jugadoresJuego(ListaJMod),
 	if
 		(length(ListaJMod) == 0) ->
-			io:format("S: Sala cerrada~n"),
+			io:format("[Sala] Sala cerrada~n"),
  			{stop, normal, []};
 		(length (ListaJP) > 0) ->
 			self() ! {jugada},
 			{next_state, estadoPedirJugada, {Temp, Juego, {ListaJMod, ListaJP}}};
 		(true) ->
-			io:format("S: Proximo estado JUGADA BANCA~n"),
+			io:format("[Sala] Proximo estado JUGADA BANCA~n"),
 			self() ! {banca},
 			{next_state, jugadaBanca, {Temp, Juego, {ListaJMod, ListaJMod}}}
 	end;
@@ -105,12 +105,12 @@ esperarJugada ({timeout, _From, JAux}, {Temp, Juego, {ListaJ, []}}) ->
 
 esperarJugada ({timeout, _From, JAux}, {Temp, Juego, {ListaJ, ListaJAux}}) ->
 	{_Pid, NombreJ, _Fichas, _ApuestaJ, _Mano, _Estado} = buscarJugador(ListaJ, JAux),
-	io:format("S: Eliminamos a ~s~n", [NombreJ]),
+	io:format("[Sala] Eliminamos a ~s~n", [NombreJ]),
 	ListaJMod = borrarJugador(JAux, ListaJ),
 	exit(JAux, kill),
 	if
 		(length(ListaJMod) == 0) ->
-			io:format("S: Sala cerrada~n"),
+			io:format("[Sala] Sala cerrada~n"),
    			{stop, normal, []};
 		(true) ->
 			self() ! {jugada},
@@ -122,13 +122,13 @@ esperarJugada ({timeout, _From, JAux}, {Temp, Juego, {ListaJ, ListaJAux}}) ->
 %______________________________MENSAJES DE LOS JUGADORES__________________________
 
 handle_info ({apuesta}, pedirApuesta, {Temp, Juego, {ListaJ, []}}) ->
-	io:format("S: Proximo estado REPARTIR CARTAS~n"),
+	io:format("[Sala] Proximo estado REPARTIR CARTAS~n"),
 	self() ! {repartir},
 	{next_state, repartirCartas, {Temp, Juego, {ListaJ, ListaJ}}};
 
 handle_info ({apuesta}, pedirApuesta, {_Temp, Juego, { ListaJ,
 		[{Jugador, NombreJ, Fichas, _Apuesta, _Mano, _Estado}|RestoJ]}}) ->
-	io:format("S: Pedimos apuesta a ~s~n", [NombreJ]),
+	io:format("[Sala] Pedimos apuesta a ~s~n", [NombreJ]),
 	TempAux = gen_fsm:start_timer(60000,  Jugador),
 	Jugador ! {apostar, self(), Fichas},
 	{next_state, esperarApuesta, {TempAux, Juego, {ListaJ, RestoJ}}};
@@ -139,7 +139,7 @@ handle_info ({{apuesta, Apuesta}, Jugador}, esperarApuesta, {Temp, Partida, {Lis
 	{_Pid, NombreJ, Fichas, _ApuestaJ, _Mano, _Estado} = buscarJugador(ListaJ, Jugador),
 	if
 		(Fichas >= Apuesta) ->
-			io:format("S: ~s ha apostado ~w~n", [NombreJ, Apuesta]),
+			io:format("[Sala] ~s ha apostado ~w~n", [NombreJ, Apuesta]),
 			ListaJAp = apuestaJugador(ListaJ, Apuesta, Jugador),
 			broadCast(ListaJAp, {"~s ha apostado ~w fichas.~n", [NombreJ, Apuesta]}),
 			self() ! {apuesta},
@@ -152,11 +152,11 @@ handle_info ({{apuesta, Apuesta}, Jugador}, esperarApuesta, {Temp, Partida, {Lis
 %_________________________________________________________________________________
 
 handle_info ({repartir}, repartirCartas, {Temp, {Baraja, _CBanca, PBanca}, {ListaJ, ListaJ}}) ->
-	io:format("S: Repartiendo cartas.~n"),
+	io:format("[Sala] Repartiendo cartas.~n"),
 	{ListaJAux, RestoB} = repartirCartasJ({ListaJ, Baraja}),
 	{{Valor, Nombre, Palo, _EstadoC}, RestoB2} = obtenerCarta(RestoB),
 	broadCast(ListaJ, {"Banca recibe: ~w de ~w .~n", [[Valor], [Palo]]}),
-	io:format("S: Proximo estado PEDIR JUGADA~n"),
+	io:format("[Sala] Proximo estado PEDIR JUGADA~n"),
 	self() ! {jugada},
 	{next_state, pedirJugada, {Temp, {RestoB2, [{Valor, Nombre, Palo, descubierta}], PBanca}, {ListaJAux, ListaJAux}}};
 %_________________________________________________________________________________
@@ -166,11 +166,11 @@ handle_info ({jugada}, pedirJugada, {Temp, Juego, {ListaJ, []}}) ->
 	TamListaJ = length (ListaJP),
 	if
 		(TamListaJ > 0) ->
-			io:format("S: Jugadores en juego ~w~n", [ListaJP]),
+			io:format("[Sala] Jugadores en juego ~w~n", [ListaJP]),
 			self() ! {jugada},
 			{next_state, pedirJugada, {Temp, Juego, {ListaJ, ListaJP}}};
 		(true) ->
-			io:format("S: Proximo estado JUGADA BANCA~n"),
+			io:format("[Sala] Proximo estado JUGADA BANCA~n"),
 			self() ! {banca},
 			{next_state, jugadaBanca, {Temp, Juego, {ListaJ, ListaJ}}}
 	end;
@@ -178,7 +178,7 @@ handle_info ({jugada}, pedirJugada, {Temp, Juego, {ListaJ, []}}) ->
 handle_info ({jugada}, pedirJugada, { _Temp, Juego,
 		{ ListaJ, [{Jugador, NombreJ, _Fichas, _Apuesta, _Mano, _Estado}|RestoJ]}}) ->
 	{_Pid, NombreJ, _Fichas, _ApuestaJ, _Mano, _Estado} = buscarJugador(ListaJ, Jugador),
-	io:format("S: ESTADO pedirJugada a ~s~n", [NombreJ]),
+	io:format("[Sala] ESTADO pedirJugada a ~s~n", [NombreJ]),
 	TempAux = gen_fsm:start_timer(60000, Jugador),
 	Jugador ! {jugar},
 	{next_state, esperarJugada, {TempAux, Juego, {ListaJ, RestoJ}}};
@@ -189,14 +189,14 @@ handle_info({banca}, jugadaBanca, {Temp, {Baraja, CBanca, _PBanca}, {ListaJ, _Li
 	PBancaAux = sumarCartas(CBancaN),
 	broadCast(ListaJ, {"Cartas Banca: ~w~n", [CBancaN]}),
 	broadCast(ListaJ, {"La Banca tiene una puntuacion de ~w puntos~n", [PBancaAux]}),
-	io:format("S: Proximo estado CALCULAR GANADORES~n"),
+	io:format("[Sala] Proximo estado CALCULAR GANADORES~n"),
 	self() ! {calcularGanadores},
 	{next_state, calcularGanadores, {Temp,{MazoN, CBanca, PBancaAux} , {ListaJ, ListaJ}}};
 %_________________________________________________________________________________
 
  handle_info({calcularGanadores}, calcularGanadores, {Temp, {_Baraja, _CBanca, PBanca}, {ListaJ, _ListaJAux}}) ->
  	ListaJN = sumarFichas(PBanca, ListaJ),
- 	io:format("S: Proximo estado PEDIR APUESTAS~n"),
+ 	io:format("[Sala] Proximo estado PEDIR APUESTAS~n"),
 	self() ! {apuesta},
  	{next_state, pedirApuesta, {Temp, {nueva_baraja(), [], 0}, {ListaJN, ListaJN}}};
 %_________________________________________________________________________________
@@ -205,7 +205,7 @@ handle_info({banca}, jugadaBanca, {Temp, {Baraja, CBanca, _PBanca}, {ListaJ, _Li
 handle_info({plantarse, Jugador}, esperarJugada, {Temp, Partida, {ListaJ, ListaJAux}}) ->
 	gen_fsm:cancel_timer(Temp),
 	{_Pid, NombreJ, _Fichas, _ApuestaJ, _Mano, _Estado} = buscarJugador(ListaJ, Jugador),
-	io:format("S: ~s se ha plantado~n", [NombreJ]),
+	io:format("[Sala] ~s se ha plantado~n", [NombreJ]),
 	ListaJN = cambiarEstado(ListaJ, Jugador, 1),
 	broadCast(ListaJN, {"~s se ha plantado.~n", [NombreJ]}),
 	self() ! {jugada},
@@ -224,14 +224,14 @@ handle_info({{carta, TJugada}, Jugador}, esperarJugada, {Temp, {Baraja, CBanca, 
 			lists:keyreplace(cubierta, 4, ManoN, {ValorR, NombreR, PaloR, descubierta}),
 			{_Pid, _NombreJ, _Fichas, _ApuestaJ, ManoN, _Estado} = buscarJugador(ListaJ, Jugador),
 			ListaJN = entregarCarta(ListaJ, Jugador, {Valor, Nombre, Palo, EstadoC}),
-			io:format("S: El jugador ~s pide carta cubierta. Revela ~w de ~w~n", [NombreJ, [ValorR],[PaloR]]),
+			io:format("[Sala] El jugador ~s pide carta cubierta. Revela ~w de ~w~n", [NombreJ, [ValorR],[PaloR]]),
 			PJugador = sumarCartas(ManoN) + Valor,
 			broadCast(ListaJN, {"~s ha pedido carta cubierta. Carta Revelada: ~w de ~w   Puntuacion: ~w~n", [[NombreJ], [ValorR], [PaloR], [PJugador]]}),
 			Jugador ! {mensaje, {"PRIVADO: Recibes ~w de ~w.~n", [[Valor],[Palo]]}};
 
 		(TJugada == "descubierta") ->
 			ListaJN = entregarCarta(ListaJ, Jugador, {Valor, Nombre, Palo, descubierta}),
-			io:format("S: El jugador ~s pide carta descubierta. Recibe ~w de ~w~n", [NombreJ, [Valor],[Palo]]),
+			io:format("[Sala] El jugador ~s pide carta descubierta. Recibe ~w de ~w~n", [NombreJ, [Valor],[Palo]]),
 			{_Pid, _NombreJ, _Fichas, _ApuestaJ, ManoN, _Estado} = buscarJugador(ListaJN, Jugador),
 			PJugador = sumarCartas(ManoN),
 			broadCast(ListaJN, {"~s ha pedido carta descubierta. Carta nueva: ~w de ~w   Puntuacion: ~w~n", [[NombreJ], [Valor], [Palo], [PJugador]]})
@@ -253,12 +253,12 @@ handle_info({{carta, TJugada}, Jugador}, esperarJugada, {Temp, {Baraja, CBanca, 
 handle_info({abandonar, Jugador}, esperarApuesta, {Temp, Partida, {ListaJ, ListaJAux}} ) ->
 	gen_fsm:cancel_timer(Temp),
 	{_Pid, NombreJ, _Fichas, _ApuestaJ, _Mano, _Estado} = buscarJugador(ListaJ, Jugador),
-	io:format("S: ~s ha abandonado la partida.~n", [NombreJ]),
+	io:format("[Sala] ~s ha abandonado la partida.~n", [NombreJ]),
 	ListaJMod = borrarJugador(Jugador, ListaJ),
 	broadCast(ListaJMod, {"~s ha abandonado la partida.~n", [NombreJ]}),
 	if
 		(length(ListaJMod) == 0) ->
-			io:format("S: Sala cerrada~n"),
+			io:format("[Sala] Sala cerrada~n"),
    			{stop, normal, []};
 		(true) ->
 			self() ! {apuesta},
@@ -268,12 +268,12 @@ handle_info({abandonar, Jugador}, esperarApuesta, {Temp, Partida, {ListaJ, Lista
 handle_info({abandonar, Jugador}, esperarJugada, {Temp, Partida, {ListaJ, ListaJAux}} ) ->
 	gen_fsm:cancel_timer(Temp),
 	{_Pid, NombreJ, _Fichas, _ApuestaJ, _Mano, _Estado} = buscarJugador(ListaJ, Jugador),
-	io:format("S: ~s ha abandonado la partida.~n", [NombreJ]),
+	io:format("[Sala] ~s ha abandonado la partida.~n", [NombreJ]),
 	ListaJMod = borrarJugador(Jugador, ListaJ),
 	broadCast(ListaJMod, {"~s ha abandonado la partida.~n", [NombreJ]}),
 	if
 		(length(ListaJMod) == 0) ->
-			io:format("S: Sala cerrada~n"),
+			io:format("[Sala] Sala cerrada~n"),
    			{stop, normal, []};
 		(true) ->
 			self() ! {jugada},
@@ -409,7 +409,7 @@ buscarJugador([{_JugadorAux, _NombreJ, _Fichas, _Apuesta, _Mano, _Estado}|ListaJ
 %_________________________________________________________________________________
 
 cartasBanca(CBanca, Baraja) ->
-	io:format("S: A la baraja le quedan ~w cartas ~n",[length(Baraja)]),
+	io:format("[Sala] A la baraja le quedan ~w cartas ~n",[length(Baraja)]),
 	{{Valor, Nombre, Palo, EstadoC}, RestoB} = obtenerCarta(Baraja),
 	TotalCartas = CBanca++[{Valor, Nombre, Palo, EstadoC}],
 	Puntuacion = sumarCartas(TotalCartas),
