@@ -447,9 +447,14 @@ sumarFichas(PBanca, [{Jugador,NombreJ,Fichas,Apuesta,Mano,Estado}|ListaJO], List
 			Jugador ! {mensaje, {"Has empatado con la banca con ~w puntos, has ganado ~w fichas.~n", [[PuntuacionJ], [Apuesta]]}},
 			sumarFichas(PBanca, ListaJO, [{Jugador, NombreJ, Fichas+Apuesta,0,[], Estado}]++ListaJ);
 		(PBanca > PuntuacionJ) ->
-			Jugador ! {mensaje, {"Has perdido con ~w puntos, te ha ganado la banca.~n", [PuntuacionJ]}},
-			sumarFichas(PBanca, ListaJO, [{Jugador,NombreJ, Fichas,0,[],Estado}]++ListaJ)
-	end;
+			case PBanca of {_Pbanca} when PBanca > 75 ->
+				Jugador ! {mensaje, {"Has ganado a la banca(~w) con ~w puntos, has ganado ~w fichas.~n", [[PBanca],[PuntuacionJ], [Apuesta*2]]}},
+				sumarFichas(PBanca, ListaJO, [{Jugador,NombreJ,Fichas+(Apuesta*2),0,[], Estado}]++ListaJ);
+			_ ->
+				Jugador ! {mensaje, {"Has perdido con ~w puntos, pero la banca se ha pasado.~n", [PuntuacionJ]}},
+				sumarFichas(PBanca, ListaJO, [{Jugador,NombreJ, Fichas,0,[],Estado}]++ListaJ)
+			end
+	 end;
 
 sumarFichas(_PBanca, [], ListaJ) ->
 	ListaJ.
